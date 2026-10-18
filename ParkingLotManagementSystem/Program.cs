@@ -170,6 +170,16 @@ class ParkingLevel
     {
         
     }
+
+    public void nhanxe(Vehicle xe)
+    {
+
+    }
+
+    public void traCho()
+    {
+
+    }
 }
 
 class Ticket
