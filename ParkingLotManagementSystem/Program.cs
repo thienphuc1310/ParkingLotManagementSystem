@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Drawing;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Xml.Linq;
 
 public abstract class Vehicle //done
@@ -364,12 +367,15 @@ class ParkingLevel //một tầng, chứa nhiều ParkingSpot, nó sẽ phải h
 
     //chọn khu phù hợp trong tầng để nhận xe
     //trung gian kiểm tra khu đậu xe và đưa xe vào NhanXe
-    public void nhanxe(Vehicle xe)
+    public void nhanxe(Vehicle xe, ParkingSpot khuPhuHop)
     {
-        ParkingSpot choPhuHop = TimChoTrong(xe);
-        if (choPhuHop == null)
-            throw new InvalidOperationException("Tầng không còn chỗ phù hợp cho xe này.");
-        choPhuHop.NhanXe(xe);
+        if (khuPhuHop == null)
+            throw new ArgumentNullException(nameof(khuPhuHop));
+
+        if (danhSachParkingSpot.Contains(khuPhuHop) == false)
+            throw new InvalidOperationException("Khu đỗ xe không thuộc tầng này.");
+
+        khuPhuHop.NhanXe(xe);
     }
 
     //trả lại sức chứa khi xe rời khỏi tầng
@@ -450,54 +456,160 @@ class Ticket //vé xe
 
         return Xe.TinhPhi(soGio);
     }
+
+    //giả lập giờ vào để kiểm thử
+    public void GiaLapGioVao(DateTime gioVao)
+    {
+        if(GiaTriHieuLuc() == false)
+            throw new InvalidOperationException("Vé đã hết hiệu lực.");
+        if (gioVao > DateTime.Now)
+            throw new ArgumentException("Giờ vào không được lớn hơn giờ ra");
+        GioVao = gioVao;
+    }
 }
 
-/*class ParkingLot //toàn bộ bãi xe, bao gồm các tầng xe
-    //gọi tầng xe, để tầng xe tìm khu xe phù hợp, khu xe đó sẽ thực hiện nhận xe
+class ParkingLot //toàn bộ bãi xe, bao gồm các tầng xe
+                 //gọi tầng xe, để tầng xe tìm khu xe phù hợp, khu xe đó sẽ thực hiện nhận xe
 {
     private List<ParkingLevel> danhSachTang =new List<ParkingLevel>();
 
+    //lưu dữ liệu theo cặp
     private Dictionary<string, Ticket> danhSachVe =new Dictionary<string, Ticket>();
 
+    private long soVe = 0;
     public ParkingLot()
     {
     }
 
-    //thêm tầng cho bãi đỗ xe
+    //thêm tầng đã tạo và thêm nó vào danh sách tầng của bãi xe
     public void ThemTang(ParkingLevel tang)
     {
         if (tang == null) 
             throw new ArgumentNullException(nameof(tang));
 
-        foreach ()
+        foreach (ParkingLevel tangDaCo in danhSachTang)
+        {
+            if (tangDaCo.SoTang == tang.SoTang)
+                throw new InvalidOperationException("Số tầng đã tồn tại trong bãi đậu xe.");
+        }
+        danhSachTang.Add(tang);
     }
 
     public Ticket GuiXe(Vehicle xe)
     {
-        
+        //kiểm tra đầu vào
+        if (xe == null)
+            throw new ArgumentNullException(nameof(xe));
+
+        if (string.IsNullOrWhiteSpace(xe.MaXe))
+            throw new ArgumentException("Mã xe không được để trống");
+
+        //kiểm tra xe có đang gửi trong bãi ko bằng cách kiểm tra mã xe, vì xe đạp không có biển số xe
+        //chỉ cần check mã xe là đầy đủ cho các loại xe
+        foreach(Ticket ve in danhSachVe.Values)
+        {
+            if (ve.GiaTriHieuLuc())
+            {
+                if (ve.Xe.MaXe == xe.MaXe)
+                    throw new InvalidOperationException("Mã xe này đã có trong hệ thống bãi xe.");
+            }
+        }
+
+        //tìm từng tầng và khu phù hợp theo tầng thấp nhất trước
+        ParkingLevel tangPhuHop = null;
+        ParkingSpot khuPhuHop = null;
+        foreach (ParkingLevel tang in danhSachTang)
+        {
+            ParkingSpot? cho = tang.TimChoTrong(xe);
+
+            //
+            if (cho != null)
+            {
+                if (tangPhuHop == null ||  tang.SoTang < tangPhuHop.SoTang)
+                {
+                    tangPhuHop = tang;
+                    khuPhuHop = cho;
+                }
+            }
+        }
+
+        //ko có tầng và khu phù hợp để đỗ
+        if (tangPhuHop == null || khuPhuHop == null) return null;
+
+        //tự động tạo mã vé
+        soVe = soVe + 1;
+        string maVe = "Ve" + soVe;
+
+        //tạo vé theo đúng xe (xét theo choPhuHop)
+        Ticket veMoi = new Ticket(maVe, xe, tangPhuHop, khuPhuHop);
+
+        //lưu vé vào danhSachVe
+        danhSachVe.Add(maVe, veMoi);
+        try
+        {
+            tangPhuHop.nhanxe(xe, khuPhuHop);
+        }
+        catch
+        {
+            danhSachVe.Remove(maVe);
+            throw;
+        }
+        return veMoi;
     }
 
     public long LayXe(string maVe)
     {
-        
+        //kiểm tra vé
+        if (maVe == null)
+            throw new ArgumentNullException(nameof(maVe));
+
+        if (maVe.Trim() == "")
+            throw new ArgumentException("Mã vé không được để trống");
+
+        if (danhSachVe.ContainsKey(maVe) == false)
+            throw new InvalidOperationException("Vé không tồn tại");
+
+        //kiểm tra hiệu lực của vé
+        Ticket ve = danhSachVe[maVe];
+        if (ve.GiaTriHieuLuc() == false)
+            throw new ArgumentNullException("Vé đã hết hiệu lực.");
+
+        //chốt giờ ra và lưu phí vào vé
+        ve.KetThucVe();
+
+        //trả chỗ
+        ve.Tang.traCho(ve.Xe, ve.ChoDo);
+
+        //trả số tiền
+        return ve.PhiGuiXe;
     }
 
+    //Sum tất cả các tầng (các tầng đã tự Sum all với các ParkingSpot)
     public int SumAllSlot()
     {
         int tong = 0;
-        foreach ()
+        foreach (ParkingLevel tang in danhSachTang)
+        {
+            tong = tong + tang.SumAllSlot();
+        }
+        return tong;
     }
 
     public int SumSlotTrong()
     {
-        
+        int tong = 0;
+        foreach (ParkingLevel tang in danhSachTang)
+        {
+            tong = tong + tang.SumSlotTrong();
+        }
+        return tong;
     }
 
     public int SumSlotDangDung()
     {
-        
+        return SumAllSlot() - SumSlotTrong();
     }
-} */
+}
 
 class Program
 {
@@ -505,11 +617,15 @@ class Program
     {
 
         //khởi tạo bãi xe
-        //ParkingLot parkingLot = new ParkingLot();
+        ParkingLot parkingLot = new ParkingLot();
 
         //khởi tạo tầng xe thuộc bãi xe
         ParkingLevel tang1 = new ParkingLevel(1);
         ParkingLevel tang2 = new ParkingLevel(2);
+
+        //thêm tầng vào bãi xe
+        parkingLot.ThemTang(tang1);
+        parkingLot.ThemTang(tang2);
 
         //khởi tạo các khu xe thuộc tầng xe
         ParkingSpot SpotCar = new ParkingSpot("A01", "Car", 1);
@@ -525,35 +641,49 @@ class Program
         //tầng 2 (Bycicle)
         tang2.ThemCho(SpotBicycle);
 
-        //khởi tạo xe thuộc khu xe
+        //test với hệ thống với, tự nhận diện xe và đưa ra ticket phù hợp với loại xe
         Car oto1 = new Car("XE001", "59A-12345");
+
         Car oto2 = new Car("XE002", "60B-4556");
         Motorcycle moto1 = new Motorcycle("XE003", "59B1-12345");
         ElectricMotorcycle motodien1 = new ElectricMotorcycle("XE004", "59M1-12345");
         Bicycle xedap1 = new Bicycle("XE005", "XE-DAP-001");
 
+        Vehicle[] danhsachxe = {oto1,  oto2, moto1, motodien1, xedap1};
 
-        //test đỗ xe phù hợp/ không phù hợp loại xe/ không có chỗ
-        tang1.nhanxe(oto1);
-        Console.WriteLine("Ô tô 1 đã vào khu A01.");
+        //gửi xe vào
+        foreach(Vehicle xe in danhsachxe)
+        {
+            Ticket ve = parkingLot.GuiXe(xe);
 
-        try
-        {
-            tang1.nhanxe(xedap1);
-        }
-        catch(InvalidOperationException ex)
-        {
-            Console.WriteLine("Kkhông nhận xe đạp: " + ex.Message);
+            if (ve == null)
+                Console.WriteLine("Không có chỗ phù hợp.");
+            else
+            {
+                if (xe == oto1)
+                    ve.GiaLapGioVao(DateTime.Now.AddMinutes(-90));
+
+                Console.WriteLine(
+                    "Xe: " + ve.Xe.MaXe +
+                    " | Vé: " + ve.MaVe +
+                    " | Tầng: " + ve.Tang.SoTang +
+                    " | Giá: " + ve.TinhTien() + " vnđ" +
+                    " | Khu: " + ve.ChoDo.MaSlot);
+            }
+            Console.WriteLine(parkingLot.SumSlotTrong());
         }
 
-        try
-        {
-            tang1.nhanxe(oto2);
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.WriteLine("Kkhông nhận ô tô 2: " + ex.Message);
-        }
+        //lấy xe ô tô ra
+        long tien = parkingLot.LayXe("Ve1");
+
+        Console.WriteLine("Đã lấy xe. Tiền gửi: " + tien + " vnđ");
+        Console.WriteLine("Chỗ trống: " + parkingLot.SumSlotTrong());
+
+        //lấy xe máy ra
+        long tien2 = parkingLot.LayXe("Ve3");
+
+        Console.WriteLine("Đã lấy xe. Tiền gửi: " + tien2 + " vnđ");
+        Console.WriteLine("Chỗ trống: " + parkingLot.SumSlotTrong());
     }
 }
 
