@@ -50,8 +50,12 @@ Hệ thống hỗ trợ quản lý nhiều loại phương tiện, tự động 
 `Phí gửi xe = Số giờ gửi (làm tròn lên) × Đơn giá`
 
 Thời gian gửi được tính từ lúc xe vào bãi đến lúc xe rời bãi. Thời gian lẻ được làm tròn lên giờ tiếp theo.
+Mỗi lượt gửi tính tối thiểu 1 giờ. Ví dụ gửi 30 phút sẽ tính là 1 giờ, gửi 90 phút sẽ tính thành 2 giờ.
 
-## 5. Phân chia công việc theo tuần
+## 5. Mô tả quy tắc chọn chỗ
+Hệ thống ưu tiên tầng có số thấp nhất còn chỗ phù hợp. Trong tầng, chọn khu phù hợp đầu tiên theo thứ tự trong danh sách.
+
+## 6. Phân chia công việc theo tuần
 
 | Tuần | Công việc |
 |---|---|
