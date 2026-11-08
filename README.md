@@ -55,7 +55,14 @@ Mỗi lượt gửi tính tối thiểu 1 giờ. Ví dụ gửi 30 phút sẽ t�
 ## 5. Mô tả quy tắc chọn chỗ
 Hệ thống ưu tiên tầng có số thấp nhất còn chỗ phù hợp. Trong tầng, chọn khu phù hợp đầu tiên theo thứ tự trong danh sách.
 
-## 6. Phân chia công việc theo tuần
+## 6. Độ phức tạp của thuật toán chọn chỗ
+Thuật toán chọn chỗ có độ phức tạp thời gian O(L + S), trong đó:
+L: Số tầng cần duyệt trong bãi đỗ xe.
+S: Tổng số khu đỗ xe được kiểm tra trên các tầng đó.
+Hàm ParkingLot.GuiXe() duyệt các tầng, trong khi ParkingLevel.TimChoTrong() duyệt các khu đỗ trong từng tầng để tìm chỗ phù hợp.
+Trong trường hợp xấu nhất, hệ thống phải kiểm tra toàn bộ tầng và khu đỗ xe trước khi xác định được kết quả.
+
+## 7. Phân chia công việc theo tuần
 
 | Tuần | Công việc |
 |---|---|
@@ -64,7 +71,7 @@ Hệ thống ưu tiên tầng có số thấp nhất còn chỗ phù hợp. Tron
 | **Tuần 3** | Triển khai logic các class: phân bổ chỗ đỗ, gửi xe, lấy xe, quản lý vé, tính phí và thống kê. |
 | **Tuần 4** | Kiểm thử, sửa lỗi, cập nhật lại UML nếu có thay đổi và hoàn thiện báo cáo. |
 
-## 6. Tài liệu kèm theo
+## 8. Tài liệu kèm theo
 
 - **Sơ đồ UML:** Mô tả cấu trúc và quan hệ giữa các lớp.
 - **AI Usage Log:** Nhật ký sử dụng AI trong quá trình thực hiện dự án.
